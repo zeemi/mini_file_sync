@@ -21,51 +21,51 @@ def test_getting_configuration_from_file(configurator, configuration, config_fil
     mocked_open.assert_called_once_with(config_file_path)
 
 
-def test_cmdline_configuration_should_be_stored_first_in_cfg_list(configurator_cls, configuration):
-    configurator = configurator_cls(cmdline_options=configuration)
+def test_cmdline_configuration_should_be_stored_first_in_cfg_list(configurator, configuration):
     mocked_open = mock_open(read_data=yaml.dump({}))
     with patch.object(builtins, 'open', mocked_open):
-        configurator.process_config()
+        configurator.process_config(cmdline_options=configuration)
     assert configurator.cfg_list[0] == configuration
 
 
-def test_filtering_parameters_during_get_config_from_cmdline_options(configurator_cls, configuration):
+def test_filtering_parameters_during_get_config_from_cmdline_options(configurator, configuration):
     cmdline_options = configuration.copy()
     cmdline_options.update(Debug=True)
-    configurator = configurator_cls(cmdline_options)
+    configurator.store_cmdline_options(configuration)
     assert configurator.get_cmdline_config() == configuration
 
 
 def test_external_configuration_should_be_stored_second_in_cfg_list(configurator, configuration):
     mocked_open = mock_open(read_data=yaml.dump(configuration))
     with patch.object(builtins, 'open', mocked_open):
-        configurator.process_config()
+        configurator.process_config(cmdline_options={})
     assert configurator.cfg_list[1] == configuration
 
 
-def test_cmdline_cfg_should_override_ext_file_cfg(configurator_cls):
+def test_cmdline_cfg_should_override_ext_file_cfg(configurator):
     EXT_CFG = {'interval': 'aaa',
-                    'user': 'aaa',
-                    'passwd': 'aaa',
-                    'parallel_downloads': 'aaa'}
+               'user': 'aaa',
+               'passwd': 'aaa',
+               'parallel_downloads': 'aaa'}
 
     CMDL_CFG = {'interval': 'zzz',
-                   'passwd': 'zzz',
-                   'parallel_downloads': 'zzz'}
+                'passwd': 'zzz',
+                'parallel_downloads': 'zzz',
+                'server_address': 'http://testserver.pl'}
 
-    configurator = configurator_cls(cmdline_options=CMDL_CFG)
     with patch.object(builtins, 'open', mock_open(read_data=yaml.dump(EXT_CFG))):
-        cfg = configurator.process_config()
-    assert cfg['interval']=='zzz'
-    assert cfg['user']=='aaa'
-    assert cfg['passwd']=='zzz'
-    assert cfg['parallel_downloads']=='zzz'
+        cfg = configurator.process_config(cmdline_options=CMDL_CFG)
+    assert cfg['interval'] == 'zzz'
+    assert cfg['user'] == 'aaa'
+    assert cfg['passwd'] == 'zzz'
+    assert cfg['parallel_downloads'] == 'zzz'
+
 
 def test_configurator_raises_bad_configuration_error_when_parameter_is_missing(configurator):
-    from client.client import BadConfigurationError
+    from client.configurator import BadConfigurationError
     with patch.object(builtins, 'open', mock_open(read_data=yaml.dump({}))):
        with pytest.raises(BadConfigurationError):
-            cfg = configurator.process_config()
+            cfg = configurator.process_config(cmdline_options={})
 
 # ------------ resources ------------
 
@@ -75,11 +75,12 @@ def configuration():
     return {'interval': 'aaa',
             'user':   'aaa',
             'passwd': 'aaa',
-            'parallel_downloads': 'aaa'}
+            'parallel_downloads': 'aaa',
+            'server_address': 'http://testserver.pl'}
 
 @pytest.fixture
 def configurable_parameters():
-    return ['user', 'passwd', 'interval', 'parallel_downloads']
+    return ['user', 'passwd', 'interval', 'parallel_downloads', 'server_address']
 
 @pytest.fixture
 def config_file_path():
@@ -88,11 +89,11 @@ def config_file_path():
 
 @pytest.fixture
 def configurator(configurator_cls):
-    return configurator_cls(cmdline_options={})
+    return configurator_cls()
 
 
 @pytest.fixture
 def configurator_cls():
-    from client.client import Configurator
+    from client.configurator import Configurator
     return Configurator
 
