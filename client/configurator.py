@@ -10,7 +10,7 @@ class Configurator:
     '''
 
     def __init__(self):
-        self.config_file_path = './config.yaml'
+        self.config_file_path = 'client/config.yaml'
         self.cfg_list = []
         self.configurable_parameters = ['user',
                                         'passwd',

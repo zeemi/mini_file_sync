@@ -84,7 +84,7 @@ def configurable_parameters():
 
 @pytest.fixture
 def config_file_path():
-    return './config.yaml'
+    return 'client/config.yaml'
 
 
 @pytest.fixture
