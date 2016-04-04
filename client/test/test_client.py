@@ -33,20 +33,18 @@ def test_server_polling_requests_should_use_auth_basic(configured_file_sync_clie
     from requests.auth import _basic_auth_str
     expected_auth_value = _basic_auth_str(username=input_parameters['user'],password=input_parameters['passwd'])
     with requests_mock.mock() as m:
-        m.get(server_address, text=pending_files_list_json)
+        m.get(server_address, text=pending_files_list_json, request_headers={'Authorization' : expected_auth_value })
         response = configured_file_sync_client_with_queue.check_pending_files()
+    assert m.called
     assert response.text == pending_files_list_json
-    assert 'Authorization' in response.request.headers
-    assert expected_auth_value == response.request.headers['Authorization']
-
 
 def test_check_pending_files_should_populate_pending_files_list_with_namedtuple(configured_file_sync_client_with_queue,
                                                                                 server_address,
                                                                                 pending_files_list_json,
-                                                                                pending_files_parameters):
-    PendingFile = namedtuple('PendingFile', pending_files_parameters)
+                                                                                pending_file_class):
+
     expected_file1, expected_file2 = json.loads(pending_files_list_json)
-    ef1, ef2 = PendingFile(**expected_file1), PendingFile(**expected_file2)
+    ef1, ef2 = pending_file_class(**expected_file1), pending_file_class(**expected_file2)
     with requests_mock.mock() as m:
         m.get(server_address, text=pending_files_list_json)
         configured_file_sync_client_with_queue.check_pending_files()
@@ -158,7 +156,7 @@ def input_parameters(polling_interval, server_address, parallel_downloads):
 
 @pytest.fixture
 def pending_files_list_json():
-    return '''[{"id":"01", "uri":"http://test.pl/resources/1", "size":100, "checksum":"200"},
+        return '''[{"id":"01", "uri":"http://test.pl/resources/1", "size":100, "checksum":"200"},
                {"id":"02", "uri":"http://test.pl/resources/2", "size":100, "checksum":"300"}]'''
 
 @pytest.fixture
@@ -169,3 +167,8 @@ def empty_pending_files_list_json():
 @pytest.fixture
 def pending_files_parameters():
     return ['id', 'uri','size','checksum']
+
+
+@pytest.fixture
+def pending_file_class(pending_files_parameters):
+    return namedtuple('PendingFile', pending_files_parameters)
