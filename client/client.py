@@ -14,6 +14,7 @@ from .configurator import Configurator
 from requests_oauthlib import OAuth1
 from queue import Queue
 
+PendingFile = namedtuple('PendingFile', ['id', 'uri','size','checksum', 'auth'])
 
 class FileSyncC(object):
 
@@ -58,9 +59,8 @@ class FileSyncC(object):
         response = requests.get(self.server_address, auth=self.auth)
         try:
             data = json.loads(response.text)
-            PendingFile = namedtuple('PendingFile', ['id', 'uri','size','checksum'])
             for file in data:
-                pending_file = PendingFile(**file)
+                pending_file = PendingFile(auth=self.auth, **file)
                 self.pending_files_queue.put(pending_file)
         except ValueError:
             logging.warn('corrupted data receive in pending_files_list: %s'%response.text)

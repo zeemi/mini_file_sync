@@ -42,9 +42,10 @@ def test_check_pending_files_should_populate_pending_files_list_with_namedtuple(
                                                                                 server_address,
                                                                                 pending_files_list_json,
                                                                                 pending_file_class):
-
+    auth = configured_file_sync_client_with_queue.auth
     expected_file1, expected_file2 = json.loads(pending_files_list_json)
-    ef1, ef2 = pending_file_class(**expected_file1), pending_file_class(**expected_file2)
+    ef1, ef2 = pending_file_class(auth=auth, **expected_file1), \
+               pending_file_class(auth=auth, **expected_file2)
     with requests_mock.mock() as m:
         m.get(server_address, text=pending_files_list_json)
         configured_file_sync_client_with_queue.check_pending_files()
@@ -61,7 +62,8 @@ def test_check_pending_files_should_populate_pending_files_list_with_namedtuple(
     assert task1.uri == expected_file1['uri']
     assert task1.size == expected_file1['size']
     assert task1.checksum == ef1.checksum
-    assert task1 == ("01", "http://test.pl/resources/1", 100, "200")
+
+    assert task1 == ("01", "http://test.pl/resources/1", 100, "200", auth)
     assert task2 == ef2
 
 
@@ -109,6 +111,8 @@ def test_client_should_create_configured_number_of_workers_threads(configured_fi
 #     mock_check_pending_files.assert_has_calls([call(),call(),call()])
 
 
+def test_pending_file_object_should_have_all_information_for_downloading(pending_file_class):
+    pending_file_class(**{"id":"01", "uri":"http://test.pl/resources/1", "size":100, "checksum":"200", "auth":"whatever"})
 
 # ------------ resources ------------
 @pytest.fixture
@@ -170,5 +174,6 @@ def pending_files_parameters():
 
 
 @pytest.fixture
-def pending_file_class(pending_files_parameters):
-    return namedtuple('PendingFile', pending_files_parameters)
+def pending_file_class():
+    from client.client import PendingFile
+    return PendingFile
